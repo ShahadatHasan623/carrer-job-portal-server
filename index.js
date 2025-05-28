@@ -24,6 +24,7 @@ async function run() {
     await client.connect();
 
     const jobsCollection =client.db("carrerDB").collection("jobs")
+    const applicationsCollection =client.db("carrerDB").collection("applications")
 
     // jobs api 
     app.get('/jobs',async(req,res)=>{
@@ -39,6 +40,13 @@ async function run() {
       res.send(result)
     })
 
+    // application apis 
+    app.post('/applications',async(req,res)=>{
+      const user =req.body;
+      // console.log(user)
+      const result =await applicationsCollection.insertOne(user);
+      res.send(result)
+    })
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
