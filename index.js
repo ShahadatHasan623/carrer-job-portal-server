@@ -8,8 +8,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const uri =
-  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.off1efx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.off1efx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -23,48 +22,91 @@ async function run() {
   try {
     await client.connect();
 
-    const jobsCollection =client.db("carrerDB").collection("jobs")
-    const applicationsCollection =client.db("carrerDB").collection("applications")
+    const jobsCollection = client.db("carrerDB").collection("jobs");
+    const applicationsCollection = client
+      .db("carrerDB")
+      .collection("applications");
 
-    // jobs api 
-    app.get('/jobs',async(req,res)=>{
-        const result =await jobsCollection.find().toArray()
-        res.send(result)
-    })
+    app.post("/jobs", async (req, res) => {
+      const newJob = req.body;
+      const result = await jobsCollection.insertOne(newJob);
+      res.send(result);
+    });
 
-    // specefic id call 
-    app.get('/jobs/:id',async(req,res)=>{
-      const id=req.params.id;
-      const query ={_id: new ObjectId(id)};
-      const result =await jobsCollection.findOne(query);
-      res.send(result)
-    })
+    // jobs api
+    app.get("/jobs", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.hr_email = email;
+      }
+      const result = await jobsCollection.find(query).toArray();
+      res.send(result);
+    });
 
-    // application apis 
-    app.post('/applications',async(req,res)=>{
-      const user =req.body;
+    // cloud be done
+    // app.get('jobsMyemailAddress',async(req,res)=>{
+    //   const email =req.query.email;
+    //   const query={hr_email :email}
+    //   const result =await jobsCollection.find(query).toArray()
+    //   res.send(result)
+    // })
+
+    // specefic id call
+    app.get("/jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.get("/applications/job/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = {
+        jobId: id,
+      };
+      const result = await applicationsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // application apis
+    app.post("/applications", async (req, res) => {
+      const user = req.body;
       // console.log(user)
-      const result =await applicationsCollection.insertOne(user);
+      const result = await applicationsCollection.insertOne(user);
+      res.send(result);
+    });
+    app.patch("/applications/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const Updatedoc ={
+          $set:{
+            status:req.body.status
+          }
+      }
+      const result =await applicationsCollection.updateOne(filter,Updatedoc)
       res.send(result)
     });
-    app.get("/applications",async(req,res)=>{
-      const email =req.query.email;
-      const query ={
-        applicant:email
-      }
-      const result =await applicationsCollection.find(query).toArray();
 
-      // bad way 
-      for(const application of result ){
-        const jobId =application.jobId;
-        const jobQuery ={_id: new ObjectId(jobId)}
-        const job =await jobsCollection.findOne(jobQuery)
-        application.company=job.company;
-        application.title=job.title;
-        application.company_logo =job.company_logo;
+    app.get("/applications", async (req, res) => {
+      const email = req.query.email;
+      const query = {
+        applicant: email,
+      };
+      const result = await applicationsCollection.find(query).toArray();
+
+      // bad way
+      for (const application of result) {
+        const jobId = application.jobId;
+        const jobQuery = { _id: new ObjectId(jobId) };
+        const job = await jobsCollection.findOne(jobQuery);
+        application.company = job.company;
+        application.title = job.title;
+        application.company_logo = job.company_logo;
       }
-      res.send(result)
-    })
+      res.send(result);
+    });
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
