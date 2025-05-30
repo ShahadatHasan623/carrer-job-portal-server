@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const e = require("cors");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
@@ -52,6 +53,19 @@ async function run() {
     //   res.send(result)
     // })
 
+    app.get("/jobs/applications", async (req, res) => {
+      const email=req.query.email;
+      const query ={hr_email :email};
+      const jobs =await jobsCollection.find(query).toArray();
+      // should use aggergate to have optimum data fetching 
+      for(const job of jobs){
+        const applicationQuery ={jobId :job._id.toString()}
+        const application_count =await applicationsCollection.countDocuments(applicationQuery)
+        job.application_count=application_count
+        res.send(jobs)
+      }
+    });
+
     // specefic id call
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
@@ -80,13 +94,13 @@ async function run() {
     app.patch("/applications/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      const Updatedoc ={
-          $set:{
-            status:req.body.status
-          }
-      }
-      const result =await applicationsCollection.updateOne(filter,Updatedoc)
-      res.send(result)
+      const Updatedoc = {
+        $set: {
+          status: req.body.status,
+        },
+      };
+      const result = await applicationsCollection.updateOne(filter, Updatedoc);
+      res.send(result);
     });
 
     app.get("/applications", async (req, res) => {
