@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const e = require("cors");
 require("dotenv").config();
@@ -28,6 +29,16 @@ async function run() {
       .db("carrerDB")
       .collection("applications");
 
+    // jwt token related api;
+    app.post("/jwt", async (req, res) => {
+      const { email } = req.body;
+      const user = { email };
+      const token = jwt.sign(user, process.env.JWT_ACCESS_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+
     app.post("/jobs", async (req, res) => {
       const newJob = req.body;
       const result = await jobsCollection.insertOne(newJob);
@@ -54,15 +65,17 @@ async function run() {
     // })
 
     app.get("/jobs/applications", async (req, res) => {
-      const email=req.query.email;
-      const query ={hr_email :email};
-      const jobs =await jobsCollection.find(query).toArray();
-      // should use aggergate to have optimum data fetching 
-      for(const job of jobs){
-        const applicationQuery ={jobId :job._id.toString()}
-        const application_count =await applicationsCollection.countDocuments(applicationQuery)
-        job.application_count=application_count
-        res.send(jobs)
+      const email = req.query.email;
+      const query = { hr_email: email };
+      const jobs = await jobsCollection.find(query).toArray();
+      // should use aggergate to have optimum data fetching
+      for (const job of jobs) {
+        const applicationQuery = { jobId: job._id.toString() };
+        const application_count = await applicationsCollection.countDocuments(
+          applicationQuery
+        );
+        job.application_count = application_count;
+        res.send(jobs);
       }
     });
 
@@ -121,7 +134,6 @@ async function run() {
       }
       res.send(result);
     });
-    await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
